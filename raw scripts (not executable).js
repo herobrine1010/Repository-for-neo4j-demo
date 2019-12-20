@@ -61,12 +61,17 @@
 
 //查找导演过Alfred作为主演/配角演出过的电影的导演
 {   
-  "query":"MATCH (p1:Person})-[r1:DIRECTS]->(m:Movie)<-[r2:ACTS_IN{role:{role}}]-(p2:Person{name:{person_name}) RETURN p1.name",   
+  "query":"MATCH (p1:Person)-[r1:DIRECTS]->(m:Movie)<-[r2:ACTS_IN{role:{role}}]-(p2:Person{name:{person_name}}) RETURN p1.name",   
 	"params":{   
 		"person_name":"Alfred",
-    "role":"star/support"
+    		"role":"star/support"
 	}	   
 } 
 
+//查找在一部作品中既是导演又是演员的人
+{   
+  "query":"MATCH (p1:Person)-[r1:DIRECTS]->(m:Movie)<-[r2:ACTS_IN]-(p1) RETURN p1.name"   
+}                                      
 
-https://my.oschina.net/u/3847203/blog/1818128
+
+//查询优化方案：https://my.oschina.net/u/3847203/blog/1818128
