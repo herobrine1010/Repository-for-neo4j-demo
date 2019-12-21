@@ -1,8 +1,7 @@
 //***********************************************************************************************************
 //插入电影信息
 //Movie节点属性：movie_id,title,runtime,IMDB,release_year,release_month,release_day,introduction,
-//              formats,average_rating,rating_num,rate_1,rate_2,rate_3,rate_4,rate_5.
-//@cypher start
+//              formats,average_rating,rating_num,rate_1,rate_2,rate_3,rate_4,rate_5
         USING PERIODIC COMMIT
         LOAD CSV WITH HEADERS FROM "file:///movie_table.csv" AS row
         CREATE (:Movie {movie_id: row.movie_id, title: row.title, runtime: row.runtime, IMDB: row.IMDB,
@@ -26,7 +25,7 @@
 //Added 13371 labels, created 13371 nodes, set 40093 properties, completed after 250 ms.
 
 //在studio_id上增加索引
-        CREATE INDEX ON :Studio(studio_id)
+        CREATE INDEX ON :Studio(studio_id);
 //Added 1 index, completed after 2 ms.
 //***********************************************************************************************************
 //创建工作室和电影的联系
@@ -38,7 +37,48 @@
         MERGE (st)-[r:PRODUCES]->(m);
 //Created 157323 relationships, completed after 15839 ms.
 //***********************************************************************************************************
+//插入演员信息
+//注：演员和导演都用节点Person来表示，这样在表示同一个人导演一些电影和演出一些电影时更符合逻辑
+//Person节点基本属性:person_name(我们认为名字相同的人是同一个人)
+//演员特有的属性:actor_id,staring_num,supporting_num,acting_num
+        USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///actor_table(num).csv" AS row
+        CREATE (:Person {person_name:row.actor_name, actor_id:row.actor_id, starring_num:toInteger(row.staring_num),
+                supporting_num:toInteger(row.supporting_num),acting_num:toInteger(row.acting_num)});
+//Added 172144 labels, created 172144 nodes, set 860720 properties, completed after 3405 ms.
+
+//在person_name上建立索引
+        CREATE INDEX ON :Person(person_name);
+//Added 1 index, completed after 7 ms.
+//***********************************************************************************************************
+//插入导演信息
+//导演特有的属性:director_id,movie_num
+        USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///director_table(num).csv" AS row
+        CREATE (:Person {person_name:row.director_name, actor_id:row.actor_id, starring_num:toInteger(row.staring_num),
+                supporting_num:toInteger(row.supporting_num),acting_num:toInteger(row.acting_num)});
+
+
+
+
+
+
 //插入电影类别信息
 //Genre节点属性：
 
 
+
+        USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///clean_comments.csv" AS row
+        MATCH (m:Novie {movie_id: row.movieId})
+        MERGE (u:User{user_id:row.UserId,user_name:userName})-[r:WRITES_COMMENT]->(c:Comment{likeNum=toInteger(row.likeNum)
+        ,unlikeNum=toInteger(row.unlikeNum),score=toFloat(row.score),timestamp=row.timestamp,summary=row.summary,
+        content=row.content})<-[r2:HAS_COMMENT]-(m))
+
+//3:10
+USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///clean_comments1.csv" AS row
+        MATCH (m:Movie {movie_id: row.movieId})
+MERGE (u:User{user_name:row.userName})-[r:WRITES_COMMENT]->(c:Comment)<-[r2:HAS_COMMENT]-(m)
+ON CREATE SET u.user_id=row.UserId,c.content=row.content,c.summary=row.summary,c.timestamp=row.timestamp,c.score=toFloat(row.score),
+			  c.likeNum=toInteger(row.likeNum),c.unlikeNum=toInteger(row.unlikeNum);
