@@ -54,7 +54,7 @@
         CREATE INDEX ON :Person(actor_id);
 //Added 1 index, completed after 5 ms.
 //***********************************************************************************************************
-//创建演员和电影的联系
+//创建演员和电影的联系（实际操作中先做了演员-电影关系）
 //关系ACTS_IN形如:(p:Person)-[r:ACTS_IN{}]->(m:Movie)
         USING PERIODIC COMMIT
         LOAD CSV WITH HEADERS FROM "file:///actor_movie_table1.csv" AS row
@@ -91,31 +91,33 @@
         MATCH (m:Movie {movie_id: row.movie_id})
         MERGE (p)-[r:DIRECTS]->(m);
 //Created 19663 relationships, completed after 2693 ms.
-
-
+//***********************************************************************************************************
 //插入电影类别信息
-//Genre节点属性：
+//Genre节点属性：genre_name,movie_num
+	USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///genre_table(num).csv" AS row
+        CREATE (:Genre {genre_name:row.genre_name, movie_num:toInteger(row.movie_num)});
+//Added 31 labels, created 31 nodes, set 62 properties, completed after 480 ms.
 
+//在genre_name上建立索引
+	CREATE INDEX ON :Genre(genre_name)
+//Added 1 index, completed after 17 ms.
 
-
-        USING PERIODIC COMMIT
-        LOAD CSV WITH HEADERS FROM "file:///clean_comments.csv" AS row
-        MATCH (m:Novie {movie_id: row.movieId})
-        MERGE (u:User{user_id:row.UserId,user_name:userName})-[r:WRITES_COMMENT]->(c:Comment{likeNum=toInteger(row.likeNum)
-        ,unlikeNum=toInteger(row.unlikeNum),score=toFloat(row.score),timestamp=row.timestamp,summary=row.summary,
-        content=row.content})<-[r2:HAS_COMMENT]-(m))
-
-//3:10
+//创建类别和电影的联系
+//关系IS_GENRE形如:(m:Movie)-[r:IS_GENRE]->(g:GENRE)
+	USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///genre_movie_table.csv" AS row
+        MATCH (g:Genre {genre_name: row.genre_name})
+        MATCH (m:Movie {movie_id: row.movie_id})
+        MERGE (m)-[r:IS_GENRE]->(g);
+//Created 38623 relationships, completed after 15676 ms.
+//***********************************************************************************************************
+//插入评论信息，同时创建用户写评论、电影拥有评论的关系
 USING PERIODIC COMMIT
-        LOAD CSV WITH HEADERS FROM "file:///clean_comments1.csv" AS row
-        MATCH (m:Movie {movie_id: row.movieId})
-MERGE (u:User{user_name:row.userName})-[r:WRITES_COMMENT]->(c:Comment)<-[r2:HAS_COMMENT]-(m)
-ON CREATE SET u.user_id=row.UserId,c.content=row.content,c.summary=row.summary,c.timestamp=row.timestamp,c.score=toFloat(row.score),
-			  c.likeNum=toInteger(row.likeNum),c.unlikeNum=toInteger(row.unlikeNum);
-//3:30
-USING PERIODIC COMMIT
-        LOAD CSV WITH HEADERS FROM "file:///clean_comments.csv" AS row
-        MATCH (m:Movie {movie_id: row.movieId})
-MERGE (u:User{user_name:CASE WHEN row.userName is null THEN 'default' ELSE row.userName END})-[r:WRITES_COMMENT]->(c:Comment)<-[r2:HAS_COMMENT]-(m)
-ON CREATE SET u.user_id=row.UserId,c.content=row.content,c.summary=row.summary,c.timestamp=row.timestamp,c.score=toFloat(row.score),
+LOAD CSV WITH HEADERS FROM "file:///user_movie_table_new_new.csv" AS row
+MATCH (m:Movie{movie_id: row.movie_id})
+MATCH (u:User {user_id:row.user_id})
+MERGE (u)-[r:WRITES_COMMENT]->(c:Comment)<-[r2:HAS_COMMENT]-(m)
+ON CREATE SET c.content=row.content,c.summary=row.summary,c.timestamp=row.timestamp,c.score=toFloat(row.score),
      c.likeNum=toInteger(row.likeNum),c.unlikeNum=toInteger(row.unlikeNum);
+//Added 5024040 lables, created 5024040 nodes, set 15054587 properties, created 10048080 relationships, completed after 12013849 ms.
