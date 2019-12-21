@@ -50,17 +50,47 @@
 //在person_name上建立索引
         CREATE INDEX ON :Person(person_name);
 //Added 1 index, completed after 7 ms.
+//因为建立actor和movie的联系时用到了actor_id和movie_id，所以在actor_id上建立索引
+        CREATE INDEX ON :Person(actor_id);
+//Added 1 index, completed after 5 ms.
+//***********************************************************************************************************
+//创建演员和电影的联系
+//关系ACTS_IN形如:(p:Person)-[r:ACTS_IN{}]->(m:Movie)
+        USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///actor_movie_table1.csv" AS row
+        MATCH (p:Person {actor_id: row.actor_id})
+        MATCH (m:Movie {movie_id: row.movie_id})
+        MERGE (p)-[r:ACTS_IN]->(m)
+	ON CREATE SET r.role=
+	CASE 
+		WHEN row.staring='0' and row.supporting='0' THEN 0
+		WHEN row.staring='1' and row.supporting='0' THEN 1
+		WHEN row.staring='0' and row.supporting='1' THEN 2
+		WHEN row.staring='1' and row.supporting='1' THEN 3 
+	END;
+//Set 624846 properties, created 624846 relationships, completed after 101685 ms.
 //***********************************************************************************************************
 //插入导演信息
 //导演特有的属性:director_id,movie_num
         USING PERIODIC COMMIT
         LOAD CSV WITH HEADERS FROM "file:///director_table(num).csv" AS row
-        CREATE (:Person {person_name:row.director_name, actor_id:row.actor_id, starring_num:toInteger(row.staring_num),
-                supporting_num:toInteger(row.supporting_num),acting_num:toInteger(row.acting_num)});
-
-
-
-
+        MERGE (p:Person {person_name:row.director_name})
+	ON CREATE SET p.director_id=row.director_id, p.movie_num=toInteger(row.movie_num);
+//Added 7749 labels, created 7749 nodes, set 23247 properties, completed after 4939 ms.
+	USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///director_table(num).csv" AS row
+        MATCH (p:Person {person_name:row.director_name})
+	SET p.director_id=row.director_id, p.movie_num=toInteger(row.movie_num);
+//Set 20582 properties, completed after 1310 ms.
+//***********************************************************************************************************
+//创建导演和电影的联系
+//关系DIRECTS形如:(p:Person)-[r:DIRECTS]->(m:Movie)
+        USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///director_movie_table.csv" AS row
+        MATCH (p:Person {director_id: row.director_id})
+        MATCH (m:Movie {movie_id: row.movie_id})
+        MERGE (p)-[r:DIRECTS]->(m);
+//Created 19663 relationships, completed after 2693 ms.
 
 
 //插入电影类别信息
@@ -82,3 +112,10 @@ USING PERIODIC COMMIT
 MERGE (u:User{user_name:row.userName})-[r:WRITES_COMMENT]->(c:Comment)<-[r2:HAS_COMMENT]-(m)
 ON CREATE SET u.user_id=row.UserId,c.content=row.content,c.summary=row.summary,c.timestamp=row.timestamp,c.score=toFloat(row.score),
 			  c.likeNum=toInteger(row.likeNum),c.unlikeNum=toInteger(row.unlikeNum);
+//3:30
+USING PERIODIC COMMIT
+        LOAD CSV WITH HEADERS FROM "file:///clean_comments.csv" AS row
+        MATCH (m:Movie {movie_id: row.movieId})
+MERGE (u:User{user_name:CASE WHEN row.userName is null THEN 'default' ELSE row.userName END})-[r:WRITES_COMMENT]->(c:Comment)<-[r2:HAS_COMMENT]-(m)
+ON CREATE SET u.user_id=row.UserId,c.content=row.content,c.summary=row.summary,c.timestamp=row.timestamp,c.score=toFloat(row.score),
+     c.likeNum=toInteger(row.likeNum),c.unlikeNum=toInteger(row.unlikeNum);
